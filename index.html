@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Flashcards Coran - Vocabulaire</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="apple-touch-icon" href="avatars/sacha.jpg">
+    <title>Flashcards Coran</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -338,12 +342,15 @@
 
     <!-- HOME PAGE -->
     <div class="home-container" id="homePage">
-        <div class="current-profile" id="currentProfile">
-            <img src="avatars/sacha.jpg" alt="" id="profileImg">
-            <div>
-                <div class="name" id="profileName">Sacha</div>
-                <div class="switch-hint">Touche pour changer</div>
+        <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:15px;">
+            <div class="current-profile" id="currentProfile" style="margin-bottom:0;flex:1;">
+                <img src="avatars/sacha.jpg" alt="" id="profileImg">
+                <div>
+                    <div class="name" id="profileName">Sacha</div>
+                    <div class="switch-hint">Touche pour changer</div>
+                </div>
             </div>
+            <button id="refreshBtn" style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.1);border:none;color:#fff;cursor:pointer;font-size:1.2rem;" title="Rafraîchir">🔄</button>
         </div>
 
         <div class="home-header">
@@ -818,6 +825,11 @@
         });
 
         currentProfileEl.addEventListener('click', switchProfile);
+        
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            srsData = loadSRS();
+            renderModuleList();
+        });
 
         startSelectedBtn.addEventListener('click', () => startReview([...selectedModules]));
         startAllBtn.addEventListener('click', () => startReview(modules.map(m => m.id), true));
@@ -866,6 +878,23 @@
                     if (e.key === '2') document.querySelector('[data-grade="hard"]').click();
                     if (e.key === '3') document.querySelector('[data-grade="good"]').click();
                 }
+            }
+        });
+
+        // ========== AUTO REFRESH ON VISIBILITY ==========
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && homePage.style.display === 'block') {
+                // Refresh stats when returning to app
+                srsData = loadSRS();
+                renderModuleList();
+            }
+        });
+
+        // Also refresh on focus (for PWA)
+        window.addEventListener('focus', () => {
+            if (homePage.style.display === 'block') {
+                srsData = loadSRS();
+                renderModuleList();
             }
         });
 
