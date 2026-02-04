@@ -141,9 +141,10 @@
             border-radius: 12px;
         }
 
-        .stat-value { font-size: 1.4rem; font-weight: 700; }
+        .stat-value { font-size: 1.3rem; font-weight: 700; }
         .stat-value.due { color: #fc5c65; }
         .stat-value.new { color: #4a90d9; }
+        .stat-value.learning { color: #f7b731; }
         .stat-value.learned { color: #38a169; }
         .stat-label { font-size: 0.7rem; opacity: 0.7; margin-top: 3px; }
 
@@ -360,8 +361,12 @@
                 <div class="stat-label">Nouvelles</div>
             </div>
             <div class="stat-item">
+                <div class="stat-value learning" id="totalLearning">0</div>
+                <div class="stat-label">En cours</div>
+            </div>
+            <div class="stat-item">
                 <div class="stat-value learned" id="totalLearned">0</div>
-                <div class="stat-label">Apprises</div>
+                <div class="stat-label">Maîtrisées</div>
             </div>
         </div>
 
@@ -612,38 +617,53 @@
         const backHomeBtn = document.getElementById('backHomeBtn');
         const totalDueEl = document.getElementById('totalDue');
         const totalNewEl = document.getElementById('totalNew');
+        const totalLearningEl = document.getElementById('totalLearning');
         const totalLearnedEl = document.getElementById('totalLearned');
         const currentProfileEl = document.getElementById('currentProfile');
 
         // ========== FUNCTIONS ==========
         function getModuleStats(moduleId) {
             const mod = modules.find(m => m.id === moduleId);
-            let due = 0, newCount = 0, learned = 0;
+            let due = 0, newCount = 0, learning = 0, learned = 0;
             mod.words.forEach((word, wi) => {
                 CARD_TYPES.forEach(type => {
                     const key = getCardKey(moduleId, wi, type);
-                    if (isNew(key)) newCount++;
-                    else if (isDue(key)) due++;
-                    const state = getCardState(key);
-                    if (state.state === 'review' && state.intervalDays >= 7) learned++;
+                    const cardState = getCardState(key);
+                    
+                    if (isNew(key)) {
+                        newCount++;
+                    } else if (isDue(key)) {
+                        due++;
+                    }
+                    
+                    // En cours = cartes vues mais pas encore maîtrisées (interval < 7j)
+                    if (cardState.state === 'learn' || (cardState.state === 'review' && cardState.intervalDays < 7)) {
+                        learning++;
+                    }
+                    
+                    // Maîtrisées = interval >= 7 jours
+                    if (cardState.state === 'review' && cardState.intervalDays >= 7) {
+                        learned++;
+                    }
                 });
             });
-            return { due, new: newCount, learned };
+            return { due, new: newCount, learning, learned };
         }
 
         function getTotalStats() {
-            let due = 0, newCount = 0, learned = 0;
+            let due = 0, newCount = 0, learning = 0, learned = 0;
             modules.forEach(mod => {
                 const stats = getModuleStats(mod.id);
-                due += stats.due; newCount += stats.new; learned += stats.learned;
+                due += stats.due; newCount += stats.new; learning += stats.learning; learned += stats.learned;
             });
-            return { due, new: newCount, learned };
+            return { due, new: newCount, learning, learned };
         }
 
         function renderModuleList() {
             const totalStats = getTotalStats();
             totalDueEl.textContent = totalStats.due;
             totalNewEl.textContent = totalStats.new;
+            totalLearningEl.textContent = totalStats.learning;
             totalLearnedEl.textContent = totalStats.learned;
 
             moduleList.innerHTML = modules.map(mod => {
@@ -659,6 +679,7 @@
                         <div class="module-stats">
                             <span class="due">📕 ${stats.due}</span>
                             <span class="new-count">✨ ${stats.new}</span>
+                            <span style="color:#f7b731">📖 ${stats.learning}</span>
                         </div>
                     </div>
                 </div>
