@@ -598,6 +598,141 @@
 
     <script src="data/decks.js"></script>
     <script>
+        // ========== i18n ==========
+        const translations = {
+            fr: {
+                appTitle: '📚 Flashcards',
+                chooseDecek: 'Choisis un deck pour commencer',
+                cards: 'cartes',
+                mastered: 'acquis',
+                learning: 'En cours',
+                known: 'Acquis',
+                // Modes
+                modeCards: 'Cartes',
+                modeCardsDesc: 'Swipe pour trier ce que tu connais',
+                modeLearn: 'Apprendre',
+                modeLearnDesc: 'QCM avec répétition intelligente',
+                modeTest: 'Test',
+                modeTestDesc: 'Évalue tes connaissances',
+                modeMatch: 'Associer',
+                modeMatchDesc: 'Relie les paires rapidement',
+                // Cards
+                tapToFlip: 'Appuie pour retourner',
+                toReview: 'À revoir',
+                // Learn
+                learningCycle: "Cycle d'apprentissage",
+                tryAgain: 'Essayons à nouveau',
+                cycleComplete: 'Cycle terminé !',
+                correct: 'correct',
+                errors: 'erreurs',
+                nextCycle: 'Cycle suivant',
+                finish: 'Terminer',
+                congrats: 'Bravo !',
+                allLearned: 'Bravo ! Tu as tout appris ! 🎉',
+                // Test
+                configureTest: 'Configurez votre test',
+                numQuestions: 'Nombre de questions',
+                multipleChoice: 'Choix multiple',
+                startTest: 'Commencer le test',
+                next: 'Suivant',
+                yourResults: 'Vos résultats',
+                youAreLearning: "Vous êtes en train d'apprendre !",
+                wellDone: 'Bien joué !',
+                excellent: 'Excellent ! 🌟',
+                correctLabel: 'Correct',
+                incorrectLabel: 'Incorrect',
+                learnMode: '📖 Mode Apprendre',
+                newTest: '🔄 Nouveau test',
+                yourAnswers: 'Vos réponses',
+                // Match
+                readyToPlay: 'Prêt à jouer ?',
+                matchInstructions: 'Associez tous les termes avec leurs définitions le plus rapidement possible. Si vous vous trompez, une pénalité de temps sera ajoutée !',
+                startGame: 'Commencer le jeu',
+                seconds: 'secondes',
+                allPairsFound: 'Toutes les paires trouvées !',
+                playAgain: 'Rejouer',
+                back: 'Retour',
+                // Options
+                options: 'Options',
+                shuffleCards: 'Mélanger les cartes',
+                cardSide: 'Côté de la carte',
+                front: 'Recto',
+                arabic: 'Arabe',
+                french: 'Français',
+                browseAgain: 'Parcourir à nouveau',
+                general: 'Général',
+                all: 'Toutes'
+            },
+            en: {
+                appTitle: '📚 Flashcards',
+                chooseDeck: 'Choose a deck to start',
+                cards: 'cards',
+                mastered: 'mastered',
+                learning: 'Learning',
+                known: 'Known',
+                // Modes
+                modeCards: 'Cards',
+                modeCardsDesc: 'Swipe to sort what you know',
+                modeLearn: 'Learn',
+                modeLearnDesc: 'Quiz with smart repetition',
+                modeTest: 'Test',
+                modeTestDesc: 'Evaluate your knowledge',
+                modeMatch: 'Match',
+                modeMatchDesc: 'Match pairs quickly',
+                // Cards
+                tapToFlip: 'Tap to flip',
+                toReview: 'To review',
+                // Learn
+                learningCycle: 'Learning cycle',
+                tryAgain: 'Let\'s try again',
+                cycleComplete: 'Cycle complete!',
+                correct: 'correct',
+                errors: 'errors',
+                nextCycle: 'Next cycle',
+                finish: 'Finish',
+                congrats: 'Well done!',
+                allLearned: 'Congrats! You learned everything! 🎉',
+                // Test
+                configureTest: 'Configure your test',
+                numQuestions: 'Number of questions',
+                multipleChoice: 'Multiple choice',
+                startTest: 'Start test',
+                next: 'Next',
+                yourResults: 'Your results',
+                youAreLearning: 'You\'re learning!',
+                wellDone: 'Well done!',
+                excellent: 'Excellent! 🌟',
+                correctLabel: 'Correct',
+                incorrectLabel: 'Incorrect',
+                learnMode: '📖 Learn mode',
+                newTest: '🔄 New test',
+                yourAnswers: 'Your answers',
+                // Match
+                readyToPlay: 'Ready to play?',
+                matchInstructions: 'Match all terms with their definitions as fast as possible. If you make a mistake, a time penalty will be added!',
+                startGame: 'Start game',
+                seconds: 'seconds',
+                allPairsFound: 'All pairs found!',
+                playAgain: 'Play again',
+                back: 'Back',
+                // Options
+                options: 'Options',
+                shuffleCards: 'Shuffle cards',
+                cardSide: 'Card side',
+                front: 'Front',
+                arabic: 'Arabic',
+                french: 'French',
+                browseAgain: 'Browse again',
+                general: 'General',
+                all: 'All'
+            }
+        };
+        
+        // Detect language
+        const userLang = (navigator.language || navigator.userLanguage || 'fr').split('-')[0];
+        const lang = translations[userLang] ? userLang : 'fr';
+        const t = (key) => translations[lang][key] || translations['fr'][key] || key;
+
         // ========== STATE ==========
         let decks = [];
         let currentDeck = null;
@@ -643,7 +778,7 @@
                 loadProgress(deck.id);
                 return `<div class="deck-card" onclick="openDeck('${deck.id}')">
                     <div class="deck-name">${deck.name}</div>
-                    <div class="deck-meta"><span>📚 ${deck.cards.length} cartes</span><span>✅ ${knownCards.size} acquis</span></div>
+                    <div class="deck-meta"><span>📚 ${deck.cards.length} ${t('cards')}</span><span>✅ ${knownCards.size} ${t('mastered')}</span></div>
                 </div>`;
             }).join('');
             knownCards = new Set(); learningCards = new Set();
@@ -787,7 +922,8 @@
             document.getElementById('cardWrapper').style.display = 'none';
             document.querySelector('.cards-controls').style.display = 'none';
             document.getElementById('cardsComplete').classList.add('active');
-            document.getElementById('cardsCompleteStats').textContent = `${knownCards.size} acquis · ${learningCards.size} en cours`;
+            document.getElementById('cardsCompleteStats').textContent = `${knownCards.size} ${t('mastered')} · ${learningCards.size} ${t('learning').toLowerCase()}`;
+            document.querySelector('#cardsComplete .complete-title').textContent = t('congrats');
             saveProgress();
         }
 
@@ -812,6 +948,7 @@
             if (learnIndex >= learnQueue.length) { showLearnComplete(); return; }
             const item = learnQueue[learnIndex];
             document.getElementById('retryBadge').style.display = item.isRetry ? 'block' : 'none';
+            document.getElementById('retryBadge').textContent = t('tryAgain');
             const askFrench = Math.random() > 0.5;
             const questionText = document.getElementById('questionText');
             questionText.textContent = askFrench ? item.card.back : item.card.front;
@@ -833,19 +970,22 @@
         }
         function updateLearnProgress() {
             const progress = (learnIndex / learnQueue.length) * 100;
-            document.getElementById('learnCycle').textContent = `Cycle d'apprentissage ${learnCycle}`;
+            document.getElementById('learnCycle').textContent = `${t('learningCycle')} ${learnCycle}`;
             document.getElementById('learnProgressBar').style.width = `${progress}%`;
             document.getElementById('learnCount').textContent = learnQueue.length - learnIndex;
         }
         function showLearnComplete() {
             document.getElementById('questionArea').style.display = 'none';
             document.getElementById('learnComplete').classList.add('active');
-            document.getElementById('learnCompleteStats').textContent = `✅ ${learnCorrect} correct · ❌ ${learnWrong} erreurs`;
+            document.querySelector('#learnComplete .complete-title').textContent = t('cycleComplete');
+            document.getElementById('learnCompleteStats').textContent = `✅ ${learnCorrect} ${t('correct')} · ❌ ${learnWrong} ${t('errors')}`;
+            document.querySelector('#learnComplete .primary-btn').textContent = t('nextCycle');
+            document.querySelector('#learnComplete .secondary-btn').textContent = t('finish');
         }
         function nextLearnCycle() {
             learnCycle++; learnCorrect = 0; learnWrong = 0;
             buildLearnQueue();
-            if (learnQueue.length === 0) { alert('Bravo ! Tu as tout appris ! 🎉'); exitMode(); return; }
+            if (learnQueue.length === 0) { alert(t('allLearned')); exitMode(); return; }
             document.getElementById('learnComplete').classList.remove('active');
             document.getElementById('questionArea').style.display = 'flex';
             renderQuestion();
@@ -912,8 +1052,12 @@
             const wrongOffset = 314 - (314 * (total - correct) / total);
             document.getElementById('resultsCircle').style.strokeDashoffset = correctOffset;
             // Title based on score
-            const titles = percent >= 80 ? 'Excellent ! 🌟' : percent >= 60 ? 'Bien joué !' : 'Vous êtes en train d\'apprendre !';
+            const titles = percent >= 80 ? t('excellent') : percent >= 60 ? t('wellDone') : t('youAreLearning');
             document.getElementById('resultsTitle').textContent = titles;
+            // Update buttons
+            document.querySelector('#testResultsPage .results-actions .primary-btn').textContent = t('learnMode');
+            document.querySelector('#testResultsPage .results-actions .secondary-btn').textContent = t('newTest');
+            document.querySelector('.results-history-title').textContent = t('yourAnswers');
             // History
             document.getElementById('resultsHistoryList').innerHTML = testQuestions.map(q => {
                 const isCorrect = q.userAnswer === q.correctIdx;
@@ -999,13 +1143,16 @@
         function updateMatchTimer() {
             const elapsed = Date.now() - matchStartTime + matchPenalty;
             const seconds = (elapsed / 1000).toFixed(1);
-            document.getElementById('matchTimer').textContent = `${seconds} secondes`;
+            document.getElementById('matchTimer').textContent = `${seconds} ${t('seconds')}`;
         }
         function checkMatchComplete() {
             if (matchCells.every(c => c.matched)) {
                 clearInterval(matchTimerInterval);
                 const finalTime = ((Date.now() - matchStartTime + matchPenalty) / 1000).toFixed(1);
-                document.getElementById('matchFinalTime').textContent = `${finalTime} secondes`;
+                document.getElementById('matchFinalTime').textContent = `${finalTime} ${t('seconds')}`;
+                document.querySelector('.match-complete-text').textContent = t('allPairsFound');
+                document.querySelector('#matchComplete .primary-btn').textContent = t('playAgain');
+                document.querySelector('#matchComplete .secondary-btn').textContent = t('back');
                 document.getElementById('matchGrid').style.display = 'none';
                 document.getElementById('matchComplete').classList.add('active');
             }
@@ -1026,7 +1173,65 @@
         // ========== UTILS ==========
         function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
+        // ========== i18n INIT ==========
+        function initI18n() {
+            // Home
+            document.querySelector('.home-header h1').textContent = t('appTitle');
+            document.querySelector('.home-header p').textContent = t('chooseDeck');
+            // Deck modes
+            document.querySelectorAll('.mode-btn').forEach((btn, i) => {
+                const modes = [
+                    { name: 'modeCards', desc: 'modeCardsDesc' },
+                    { name: 'modeLearn', desc: 'modeLearnDesc' },
+                    { name: 'modeTest', desc: 'modeTestDesc' },
+                    { name: 'modeMatch', desc: 'modeMatchDesc' }
+                ];
+                if (modes[i]) {
+                    btn.querySelector('.mode-name').textContent = t(modes[i].name);
+                    btn.querySelector('.mode-desc').textContent = t(modes[i].desc);
+                }
+            });
+            // Cards
+            document.querySelector('.tap-hint').textContent = t('tapToFlip');
+            document.querySelectorAll('.swipe-hint.left span:last-child').forEach(el => el.textContent = t('toReview'));
+            document.querySelectorAll('.swipe-hint.right span:last-child').forEach(el => el.textContent = t('known'));
+            document.querySelector('.swipe-indicator.left').textContent = t('learning');
+            document.querySelector('.swipe-indicator.right').textContent = t('known');
+            // Stats labels
+            document.querySelectorAll('.stat-label').forEach((el, i) => {
+                el.textContent = i === 0 ? t('known') : t('learning');
+            });
+            // Test config
+            document.querySelector('.config-title').textContent = t('configureTest');
+            document.querySelectorAll('.config-label').forEach((el, i) => {
+                if (i === 0) el.textContent = t('numQuestions');
+                if (i === 1) el.textContent = t('multipleChoice');
+            });
+            document.querySelector('.start-test-btn').textContent = t('startTest');
+            document.getElementById('testNextBtn').textContent = t('next');
+            // Match intro
+            document.querySelector('.match-intro-title').textContent = t('readyToPlay');
+            document.querySelector('.match-intro-desc').textContent = t('matchInstructions');
+            document.querySelector('#matchIntroPage .primary-btn').textContent = t('startGame');
+            // Options modal
+            document.querySelector('.modal-title').textContent = t('options');
+            document.querySelectorAll('.option-group-title').forEach((el, i) => {
+                el.textContent = i === 0 ? t('general') : t('cardSide');
+            });
+            document.querySelectorAll('.option-label').forEach((el, i) => {
+                if (i === 0) el.textContent = t('shuffleCards');
+                if (i === 1) el.textContent = t('front');
+            });
+            document.querySelectorAll('.side-btn').forEach((el, i) => {
+                el.textContent = i === 0 ? t('arabic') : t('french');
+            });
+            document.querySelector('#optionsModal .primary-btn').textContent = t('browseAgain');
+            // Update html lang
+            document.documentElement.lang = lang;
+        }
+
         // ========== INIT ==========
+        initI18n();
         loadDecks();
     </script>
 </body>
