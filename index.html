@@ -449,6 +449,13 @@
                     <div class="mode-desc">Relie les paires rapidement</div>
                 </div>
             </div>
+            <div class="mode-btn" onclick="startListenMode()">
+                <div class="mode-icon">🎧</div>
+                <div class="mode-info">
+                    <div class="mode-name">Écoute</div>
+                    <div class="mode-desc">Écoute et trouve le mot</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -683,6 +690,44 @@
         </div>
     </div>
 
+    <!-- LISTEN MODE -->
+    <div class="page" id="listenPage">
+        <div class="page-header">
+            <button class="back-btn" onclick="exitMode()">←</button>
+            <div class="page-title">Écoute</div>
+            <button class="settings-btn" onclick="openOptions('listen')">⚙️</button>
+        </div>
+        <div class="learn-header">
+            <div class="learn-title" id="listenProgress">1 / 10</div>
+            <div class="learn-progress">
+                <div class="learn-bar"><div class="learn-fill" id="listenProgressBar"></div></div>
+                <div class="learn-count" id="listenCount">0</div>
+            </div>
+        </div>
+        <div class="question-area" id="listenQuestionArea">
+            <div class="retry-badge" id="listenRetryBadge" style="display:none">Essayons à nouveau</div>
+            <div class="listen-prompt" style="text-align:center; margin-bottom:30px;">
+                <div style="font-size:4rem; margin-bottom:15px;">🔊</div>
+                <button class="primary-btn" style="width:auto; padding:12px 30px;" onclick="playListenAudio()">
+                    <span id="listenPromptText">Écoute le mot</span>
+                </button>
+            </div>
+            <div class="answers-list" id="listenAnswersList"></div>
+            <div class="written-answer-area" id="listenWrittenArea" style="display:none; width:100%;">
+                <input type="text" class="written-input" id="listenWrittenInput" placeholder="" autocomplete="off" autocapitalize="off">
+                <button class="primary-btn" style="margin-top:10px" onclick="submitListenWrittenAnswer()">Valider</button>
+                <div class="written-feedback" id="listenWrittenFeedback" style="display:none; margin-top:15px; padding:15px; border-radius:10px;"></div>
+            </div>
+        </div>
+        <div class="complete-screen" id="listenComplete">
+            <div class="complete-emoji">🎧</div>
+            <div class="complete-title">Session terminée !</div>
+            <div class="complete-stats" id="listenCompleteStats"></div>
+            <button class="primary-btn" onclick="startListenMode()">Recommencer</button>
+            <button class="secondary-btn" style="margin-top:10px" onclick="exitMode()">Retour</button>
+        </div>
+    </div>
+
     <!-- OPTIONS MODAL -->
     <div class="modal-overlay" id="optionsModal">
         <div class="modal">
@@ -762,6 +807,10 @@
                 modeTestDesc: 'Évalue tes connaissances',
                 modeMatch: 'Associer',
                 modeMatchDesc: 'Relie les paires rapidement',
+                modeListen: 'Écoute',
+                modeListenDesc: 'Écoute et trouve le mot',
+                listenToWord: 'Écoute le mot',
+                replay: 'Réécouter',
                 // Cards
                 tapToFlip: 'Appuie pour retourner',
                 toReview: 'À revoir',
@@ -840,6 +889,10 @@
                 modeTestDesc: 'Evaluate your knowledge',
                 modeMatch: 'Match',
                 modeMatchDesc: 'Match pairs quickly',
+                modeListen: 'Listen',
+                modeListenDesc: 'Listen and find the word',
+                listenToWord: 'Listen to the word',
+                replay: 'Replay',
                 // Cards
                 tapToFlip: 'Tap to flip',
                 toReview: 'To review',
@@ -918,6 +971,10 @@
                 modeTestDesc: 'قيّم معرفتك',
                 modeMatch: 'وصّل',
                 modeMatchDesc: 'وصّل الأزواج بسرعة',
+                modeListen: 'استماع',
+                modeListenDesc: 'استمع وجد الكلمة',
+                listenToWord: 'استمع للكلمة',
+                replay: 'إعادة',
                 // Cards
                 tapToFlip: 'اضغط للقلب',
                 toReview: 'للمراجعة',
@@ -1078,6 +1135,11 @@
 
         // Match mode
         let matchCells = [], matchSelected = null, matchStartTime = 0, matchTimerInterval = null, matchPenalty = 0;
+
+        // Listen mode
+        let listenQueue = [], listenIndex = 0, listenCorrect = 0, listenWrong = 0, listenRetrySet = new Set();
+        let listenConfig = { inputMode: 'qcm', correctionLevel: 'flexible' };
+        let currentListenQuestion = { correctAnswer: '', cardIdx: 0, card: null };
 
         // ========== STORAGE ==========
         function getStorageKey(id) { return `flashcards-${id}`; }
@@ -1623,6 +1685,137 @@
         }
         function restartMatch() { startMatch(); }
 
+        // ========== LISTEN MODE ==========
+        function startListenMode() {
+            listenQueue = currentDeck.cards.map((card, idx) => ({ card, idx }));
+            listenQueue = shuffle(listenQueue);
+            listenIndex = 0;
+            listenCorrect = 0;
+            listenWrong = 0;
+            listenRetrySet = new Set();
+            
+            document.getElementById('listenComplete').classList.remove('active');
+            document.getElementById('listenQuestionArea').style.display = 'flex';
+            
+            showPage('listenPage');
+            renderListenQuestion();
+        }
+        
+        function renderListenQuestion() {
+            if (listenIndex >= listenQueue.length) {
+                showListenComplete();
+                return;
+            }
+            
+            const item = listenQueue[listenIndex];
+            currentListenQuestion = {
+                correctAnswer: item.card.back, // Answer is always the French translation
+                cardIdx: item.idx,
+                card: item.card
+            };
+            
+            // Update progress
+            document.getElementById('listenProgress').textContent = `${listenIndex + 1} / ${listenQueue.length}`;
+            document.getElementById('listenProgressBar').style.width = `${(listenIndex / listenQueue.length) * 100}%`;
+            document.getElementById('listenCount').textContent = listenQueue.length - listenIndex;
+            
+            // Show retry badge if needed
+            const isRetry = listenRetrySet.has(item.idx);
+            document.getElementById('listenRetryBadge').style.display = isRetry ? 'block' : 'none';
+            document.getElementById('listenRetryBadge').textContent = t('tryAgain');
+            
+            // Update prompt text
+            document.getElementById('listenPromptText').textContent = t('listenToWord');
+            
+            // Reset written input
+            const writtenInput = document.getElementById('listenWrittenInput');
+            const writtenFeedback = document.getElementById('listenWrittenFeedback');
+            writtenInput.value = '';
+            writtenInput.classList.remove('correct', 'wrong');
+            writtenInput.disabled = false;
+            writtenFeedback.style.display = 'none';
+            
+            if (listenConfig.inputMode === 'written') {
+                // Written mode
+                document.getElementById('listenAnswersList').style.display = 'none';
+                document.getElementById('listenWrittenArea').style.display = 'block';
+                writtenInput.placeholder = t('typeYourAnswer');
+                writtenInput.style.direction = 'ltr';
+                writtenInput.style.fontFamily = "'Inter', sans-serif";
+            } else {
+                // QCM mode
+                document.getElementById('listenAnswersList').style.display = 'flex';
+                document.getElementById('listenWrittenArea').style.display = 'none';
+                
+                const otherCards = currentDeck.cards.filter((c, i) => i !== item.idx);
+                const allAnswers = shuffle([item.card, ...shuffle(otherCards).slice(0, 3)]);
+                
+                document.getElementById('listenAnswersList').innerHTML = allAnswers.map((ans, i) => {
+                    return `<button class="answer-btn" onclick="checkListenAnswer(${i}, ${allAnswers.indexOf(item.card)}, ${item.idx})">${ans.back}</button>`;
+                }).join('');
+            }
+            
+            // Auto-play audio after a short delay
+            setTimeout(() => playListenAudio(), 500);
+        }
+        
+        function playListenAudio() {
+            if (currentListenQuestion.card) {
+                speak(currentListenQuestion.card.front);
+            }
+        }
+        
+        function checkListenAnswer(sel, correct, cardIdx) {
+            const buttons = document.querySelectorAll('#listenAnswersList .answer-btn');
+            buttons[correct].classList.add('correct');
+            
+            if (sel === correct) {
+                listenCorrect++;
+                listenRetrySet.delete(cardIdx);
+                setTimeout(() => { listenIndex++; renderListenQuestion(); }, 600);
+            } else {
+                buttons[sel].classList.add('wrong');
+                listenWrong++;
+                listenRetrySet.add(cardIdx);
+                setTimeout(() => { listenIndex++; renderListenQuestion(); }, 1200);
+            }
+            buttons.forEach(b => b.disabled = true);
+        }
+        
+        function submitListenWrittenAnswer() {
+            const input = document.getElementById('listenWrittenInput');
+            const feedback = document.getElementById('listenWrittenFeedback');
+            const userAnswer = input.value.trim();
+            
+            if (!userAnswer) return;
+            
+            const isCorrect = checkWrittenAnswer(userAnswer, currentListenQuestion.correctAnswer, listenConfig.correctionLevel);
+            
+            input.disabled = true;
+            input.classList.add(isCorrect ? 'correct' : 'wrong');
+            
+            feedback.style.display = 'block';
+            feedback.className = 'written-feedback ' + (isCorrect ? 'correct' : 'wrong');
+            
+            if (isCorrect) {
+                feedback.innerHTML = `✓ ${t('correctLabel')}`;
+                listenCorrect++;
+                listenRetrySet.delete(currentListenQuestion.cardIdx);
+            } else {
+                feedback.innerHTML = `✗ ${t('incorrectLabel')}<div class="correct-answer">${t('correctAnswerWas')} ${currentListenQuestion.correctAnswer}</div>`;
+                listenWrong++;
+                listenRetrySet.add(currentListenQuestion.cardIdx);
+            }
+            
+            setTimeout(() => { listenIndex++; renderListenQuestion(); }, isCorrect ? 1000 : 2000);
+        }
+        
+        function showListenComplete() {
+            document.getElementById('listenQuestionArea').style.display = 'none';
+            document.getElementById('listenComplete').classList.add('active');
+            document.getElementById('listenCompleteStats').textContent = `✅ ${listenCorrect} ${t('correct')} · ❌ ${listenWrong} ${t('errors')}`;
+        }
+
         // ========== OPTIONS ==========
         let currentOptionsMode = 'cards'; // cards, learn, test
         
@@ -1634,9 +1827,9 @@
             
             // Show/hide answer mode options based on mode
             const answerModeGroup = document.getElementById('answerModeGroup');
-            if (mode === 'learn' || mode === 'test') {
+            if (mode === 'learn' || mode === 'test' || mode === 'listen') {
                 answerModeGroup.style.display = 'block';
-                const config = mode === 'learn' ? learnConfig : testConfig;
+                const config = mode === 'learn' ? learnConfig : (mode === 'listen' ? listenConfig : testConfig);
                 document.getElementById('modeQCM').classList.toggle('active', config.inputMode === 'qcm');
                 document.getElementById('modeWritten').classList.toggle('active', config.inputMode === 'written');
                 document.getElementById('correctionOptions').style.display = config.inputMode === 'written' ? 'block' : 'none';
@@ -1659,6 +1852,8 @@
                 learnConfig.inputMode = mode;
             } else if (currentOptionsMode === 'test') {
                 testConfig.inputMode = mode;
+            } else if (currentOptionsMode === 'listen') {
+                listenConfig.inputMode = mode;
             }
         }
         
@@ -1667,6 +1862,8 @@
                 learnConfig.correctionLevel = level;
             } else if (currentOptionsMode === 'test') {
                 testConfig.correctionLevel = level;
+            } else if (currentOptionsMode === 'listen') {
+                listenConfig.correctionLevel = level;
             }
             updateCorrectionUI(level);
         }
@@ -1695,6 +1892,7 @@
             closeOptions(); 
             if (currentOptionsMode === 'learn') startLearnMode();
             else if (currentOptionsMode === 'test') startTestConfig();
+            else if (currentOptionsMode === 'listen') startListenMode();
             else startCardsMode(); 
         }
 
@@ -1712,7 +1910,8 @@
                     { name: 'modeCards', desc: 'modeCardsDesc' },
                     { name: 'modeLearn', desc: 'modeLearnDesc' },
                     { name: 'modeTest', desc: 'modeTestDesc' },
-                    { name: 'modeMatch', desc: 'modeMatchDesc' }
+                    { name: 'modeMatch', desc: 'modeMatchDesc' },
+                    { name: 'modeListen', desc: 'modeListenDesc' }
                 ];
                 if (modes[i]) {
                     btn.querySelector('.mode-name').textContent = t(modes[i].name);
