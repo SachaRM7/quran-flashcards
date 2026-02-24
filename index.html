@@ -537,10 +537,10 @@
             <div class="page-title" id="testDeckName"></div>
         </div>
         <div class="config-section">
-            <div class="config-title">Configurez votre test</div>
+            <div class="config-title" id="configTestTitle">Configurez votre test</div>
             <div class="config-group">
                 <div class="config-row">
-                    <span class="config-label">Nombre de questions</span>
+                    <span class="config-label" id="configNumQLabel">Nombre de questions</span>
                     <select class="config-select" id="testNumQuestions">
                         <option value="5">5</option>
                         <option value="10">10</option>
@@ -551,9 +551,33 @@
                 </div>
             </div>
             <div class="config-group">
-                <div class="config-row">
-                    <span class="config-label">Choix multiple</span>
-                    <div class="toggle active" id="toggleQCM" onclick="toggleTestOption('qcm')"></div>
+                <div class="option-group-title" id="testAnswerModeTitle">Mode de réponse</div>
+                <div class="mode-toggle">
+                    <button class="mode-toggle-btn active" id="testModeQCM" onclick="setTestAnswerMode('qcm')">Choix multiple</button>
+                    <button class="mode-toggle-btn" id="testModeWritten" onclick="setTestAnswerMode('written')">Réponse écrite</button>
+                </div>
+                <div class="correction-options" id="testCorrectionOptions" style="display:none; margin-top:10px;">
+                    <div class="correction-option active" data-level="flexible" onclick="setTestCorrectionLevel('flexible')">
+                        <div class="correction-radio"></div>
+                        <div>
+                            <div class="correction-label">Flexible</div>
+                            <div class="correction-desc">Tolère les fautes mineures et accents</div>
+                        </div>
+                    </div>
+                    <div class="correction-option" data-level="moderate" onclick="setTestCorrectionLevel('moderate')">
+                        <div class="correction-radio"></div>
+                        <div>
+                            <div class="correction-label">Modéré</div>
+                            <div class="correction-desc">Tolère les accents, orthographe exacte</div>
+                        </div>
+                    </div>
+                    <div class="correction-option" data-level="strict" onclick="setTestCorrectionLevel('strict')">
+                        <div class="correction-radio"></div>
+                        <div>
+                            <div class="correction-label">Strict</div>
+                            <div class="correction-desc">Réponse exacte requise</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <button class="primary-btn start-test-btn" onclick="startTest()">Commencer le test</button>
@@ -570,6 +594,9 @@
         <div class="test-question" id="testQuestionArea">
             <div class="test-question-text" id="testQuestionText"></div>
             <div class="test-answers" id="testAnswers"></div>
+            <div class="test-written-area" id="testWrittenArea" style="display:none; width:100%; max-width:400px; margin:0 auto;">
+                <input type="text" class="written-input" id="testWrittenInput" placeholder="" autocomplete="off" autocapitalize="off">
+            </div>
         </div>
         <div style="padding: 20px; max-width: 400px; margin: 0 auto; width: 100%;">
             <button class="primary-btn" id="testNextBtn" onclick="nextTestQuestion()" disabled>Suivant</button>
@@ -1364,27 +1391,57 @@
         // ========== TEST MODE ==========
         function startTestConfig() {
             document.getElementById('testDeckName').textContent = currentDeck.name;
+            // Update UI to match current config
+            document.getElementById('testModeQCM').classList.toggle('active', testConfig.inputMode === 'qcm');
+            document.getElementById('testModeWritten').classList.toggle('active', testConfig.inputMode === 'written');
+            document.getElementById('testCorrectionOptions').style.display = testConfig.inputMode === 'written' ? 'block' : 'none';
+            updateTestCorrectionUI(testConfig.correctionLevel);
             showPage('testConfigPage');
         }
-        function toggleTestOption(opt) {
-            testConfig[opt] = !testConfig[opt];
-            document.getElementById('toggleQCM').classList.toggle('active', testConfig.qcm);
+        
+        function setTestAnswerMode(mode) {
+            testConfig.inputMode = mode;
+            document.getElementById('testModeQCM').classList.toggle('active', mode === 'qcm');
+            document.getElementById('testModeWritten').classList.toggle('active', mode === 'written');
+            document.getElementById('testCorrectionOptions').style.display = mode === 'written' ? 'block' : 'none';
         }
+        
+        function setTestCorrectionLevel(level) {
+            testConfig.correctionLevel = level;
+            updateTestCorrectionUI(level);
+        }
+        
+        function updateTestCorrectionUI(level) {
+            document.querySelectorAll('#testCorrectionOptions .correction-option').forEach((opt) => {
+                opt.classList.toggle('active', opt.dataset.level === level);
+            });
+        }
+        
         function startTest() {
             const numQ = document.getElementById('testNumQuestions').value;
             let cards = shuffle([...currentDeck.cards]);
             if (numQ !== 'all') cards = cards.slice(0, parseInt(numQ));
             testQuestions = cards.map((card, i) => {
                 const askFrench = Math.random() > 0.5;
+                const correctAnswer = askFrench ? card.front : card.back;
                 const otherCards = currentDeck.cards.filter(c => c !== card);
                 const wrongAnswers = shuffle(otherCards).slice(0, 3);
                 const allAnswers = shuffle([card, ...wrongAnswers]);
-                return { card, askFrench, answers: allAnswers, correctIdx: allAnswers.indexOf(card), userAnswer: null };
+                return { 
+                    card, 
+                    askFrench, 
+                    answers: allAnswers, 
+                    correctIdx: allAnswers.indexOf(card), 
+                    correctAnswer,
+                    userAnswer: null,
+                    userWrittenAnswer: ''
+                };
             });
             testIndex = 0; testAnswers = [];
             showPage('testPage');
             renderTestQuestion();
         }
+        
         function renderTestQuestion() {
             const q = testQuestions[testIndex];
             document.getElementById('testCounter').textContent = `${testIndex + 1} / ${testQuestions.length}`;
@@ -1392,34 +1449,67 @@
             const qText = document.getElementById('testQuestionText');
             qText.textContent = q.askFrench ? q.card.back : q.card.front;
             qText.classList.toggle('arabic', !q.askFrench);
-            document.getElementById('testAnswers').innerHTML = q.answers.map((ans, i) => {
-                const text = q.askFrench ? ans.front : ans.back;
-                const selected = q.userAnswer === i ? 'selected' : '';
-                return `<button class="test-answer-btn ${q.askFrench ? 'arabic' : ''} ${selected}" onclick="selectTestAnswer(${i})">${text}</button>`;
-            }).join('');
-            document.getElementById('testNextBtn').disabled = q.userAnswer === null;
+            
+            if (testConfig.inputMode === 'written') {
+                // Written mode
+                document.getElementById('testAnswers').style.display = 'none';
+                document.getElementById('testWrittenArea').style.display = 'block';
+                const input = document.getElementById('testWrittenInput');
+                input.value = q.userWrittenAnswer || '';
+                input.placeholder = t('typeYourAnswer');
+                input.style.direction = q.askFrench ? 'rtl' : 'ltr';
+                input.style.fontFamily = q.askFrench ? "'Amiri', serif" : "'Inter', sans-serif";
+                input.focus();
+                // Enable next button if there's text
+                document.getElementById('testNextBtn').disabled = !input.value.trim();
+                input.oninput = () => {
+                    q.userWrittenAnswer = input.value;
+                    document.getElementById('testNextBtn').disabled = !input.value.trim();
+                };
+            } else {
+                // QCM mode
+                document.getElementById('testAnswers').style.display = 'flex';
+                document.getElementById('testWrittenArea').style.display = 'none';
+                document.getElementById('testAnswers').innerHTML = q.answers.map((ans, i) => {
+                    const text = q.askFrench ? ans.front : ans.back;
+                    const selected = q.userAnswer === i ? 'selected' : '';
+                    return `<button class="test-answer-btn ${q.askFrench ? 'arabic' : ''} ${selected}" onclick="selectTestAnswer(${i})">${text}</button>`;
+                }).join('');
+                document.getElementById('testNextBtn').disabled = q.userAnswer === null;
+            }
         }
+        
         function selectTestAnswer(idx) {
             testQuestions[testIndex].userAnswer = idx;
             document.querySelectorAll('.test-answer-btn').forEach((btn, i) => btn.classList.toggle('selected', i === idx));
             document.getElementById('testNextBtn').disabled = false;
         }
+        
         function nextTestQuestion() {
             testIndex++;
             if (testIndex >= testQuestions.length) { showTestResults(); return; }
             renderTestQuestion();
         }
         function showTestResults() {
-            const correct = testQuestions.filter(q => q.userAnswer === q.correctIdx).length;
+            // Calculate scores based on mode
+            let correctCount = 0;
+            testQuestions.forEach(q => {
+                if (testConfig.inputMode === 'written') {
+                    q.isCorrect = checkWrittenAnswer(q.userWrittenAnswer || '', q.correctAnswer, testConfig.correctionLevel);
+                } else {
+                    q.isCorrect = q.userAnswer === q.correctIdx;
+                }
+                if (q.isCorrect) correctCount++;
+            });
+            
             const total = testQuestions.length;
-            const percent = Math.round((correct / total) * 100);
+            const percent = Math.round((correctCount / total) * 100);
             document.getElementById('testResultsCounter').textContent = `${total} / ${total}`;
             document.getElementById('resultsPercent').textContent = `${percent}%`;
-            document.getElementById('resultsCorrectCount').textContent = correct;
-            document.getElementById('resultsWrongCount').textContent = total - correct;
+            document.getElementById('resultsCorrectCount').textContent = correctCount;
+            document.getElementById('resultsWrongCount').textContent = total - correctCount;
             // Update circle
-            const correctOffset = 314 - (314 * correct / total);
-            const wrongOffset = 314 - (314 * (total - correct) / total);
+            const correctOffset = 314 - (314 * correctCount / total);
             document.getElementById('resultsCircle').style.strokeDashoffset = correctOffset;
             // Title based on score
             const titles = percent >= 80 ? t('excellent') : percent >= 60 ? t('wellDone') : t('youAreLearning');
@@ -1430,17 +1520,21 @@
             document.querySelector('.results-history-title').textContent = t('yourAnswers');
             // History
             document.getElementById('resultsHistoryList').innerHTML = testQuestions.map(q => {
-                const isCorrect = q.userAnswer === q.correctIdx;
                 const questionText = q.askFrench ? q.card.back : q.card.front;
-                const correctAnswer = q.askFrench ? q.card.front : q.card.back;
-                const userAnswer = q.userAnswer !== null ? (q.askFrench ? q.answers[q.userAnswer].front : q.answers[q.userAnswer].back) : '-';
+                const correctAnswer = q.correctAnswer;
+                let userAnswer;
+                if (testConfig.inputMode === 'written') {
+                    userAnswer = q.userWrittenAnswer || '-';
+                } else {
+                    userAnswer = q.userAnswer !== null ? (q.askFrench ? q.answers[q.userAnswer].front : q.answers[q.userAnswer].back) : '-';
+                }
                 return `<div class="result-item">
                     <div class="result-question">${questionText}</div>
                     <div class="result-answers">
                         <div class="result-answer correct"><span class="icon">✓</span> ${correctAnswer}</div>
-                        ${!isCorrect ? `<div class="result-answer wrong"><span class="icon">✗</span> ${userAnswer}</div>` : ''}
+                        ${!q.isCorrect ? `<div class="result-answer wrong"><span class="icon">✗</span> ${userAnswer}</div>` : ''}
                     </div>
-                    <div class="result-status ${isCorrect ? 'correct' : 'incorrect'}">${isCorrect ? '✓ Correct' : '✗ Incorrect'}</div>
+                    <div class="result-status ${q.isCorrect ? 'correct' : 'incorrect'}">${q.isCorrect ? '✓ Correct' : '✗ Incorrect'}</div>
                 </div>`;
             }).join('');
             showPage('testResultsPage');
