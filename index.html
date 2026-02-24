@@ -136,7 +136,10 @@
         /* ========== CARDS MODE ========== */
         #cardsPage {
             padding: 20px;
+            padding-left: 60px;
+            padding-right: 60px;
             align-items: center;
+            overflow-x: visible;
         }
 
         .cards-header {
@@ -198,6 +201,31 @@
             height: 400px;
             position: relative;
             margin-bottom: 20px;
+        }
+
+        .swipe-hint {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .swipe-hint.left {
+            left: -50px;
+            color: var(--accent-orange);
+        }
+        .swipe-hint.right {
+            right: -50px;
+            color: var(--accent-green);
+        }
+        .swipe-hint .arrow {
+            font-size: 1.2rem;
         }
 
         .swipe-card {
@@ -666,6 +694,14 @@
         </div>
 
         <div class="card-wrapper" id="cardWrapper">
+            <div class="swipe-hint left">
+                <span class="arrow">←</span>
+                <span>À revoir</span>
+            </div>
+            <div class="swipe-hint right">
+                <span class="arrow">→</span>
+                <span>Acquis</span>
+            </div>
             <div class="swipe-card" id="swipeCard">
                 <div class="swipe-indicator left">En cours</div>
                 <div class="swipe-indicator right">Acquis</div>
