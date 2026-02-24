@@ -456,6 +456,13 @@
                     <div class="mode-desc">Écoute et trouve le mot</div>
                 </div>
             </div>
+            <div class="mode-btn" onclick="startImageMode()">
+                <div class="mode-icon">🖼️</div>
+                <div class="mode-info">
+                    <div class="mode-name">Image</div>
+                    <div class="mode-desc">Trouve le mot à partir de l'image</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -690,6 +697,42 @@
         </div>
     </div>
 
+    <!-- IMAGE MODE -->
+    <div class="page" id="imagePage">
+        <div class="page-header">
+            <button class="back-btn" onclick="exitMode()">←</button>
+            <div class="page-title">Image</div>
+            <button class="settings-btn" onclick="openOptions('image')">⚙️</button>
+        </div>
+        <div class="learn-header">
+            <div class="learn-title" id="imageProgress">1 / 10</div>
+            <div class="learn-progress">
+                <div class="learn-bar"><div class="learn-fill" id="imageProgressBar"></div></div>
+                <div class="learn-count" id="imageCount">0</div>
+            </div>
+        </div>
+        <div class="question-area" id="imageQuestionArea">
+            <div class="retry-badge" id="imageRetryBadge" style="display:none">Essayons à nouveau</div>
+            <div class="image-prompt" style="text-align:center; margin-bottom:20px;">
+                <div class="image-display" id="imageDisplay" style="font-size:6rem; margin-bottom:10px;"></div>
+                <div class="image-question" id="imageQuestion" style="font-size:1.1rem; color:var(--text-secondary);">Qu'est-ce que c'est ?</div>
+            </div>
+            <div class="answers-list" id="imageAnswersList"></div>
+            <div class="written-answer-area" id="imageWrittenArea" style="display:none; width:100%;">
+                <input type="text" class="written-input" id="imageWrittenInput" placeholder="" autocomplete="off" autocapitalize="off">
+                <button class="primary-btn" style="margin-top:10px" onclick="submitImageWrittenAnswer()">Valider</button>
+                <div class="written-feedback" id="imageWrittenFeedback" style="display:none; margin-top:15px; padding:15px; border-radius:10px;"></div>
+            </div>
+        </div>
+        <div class="complete-screen" id="imageComplete">
+            <div class="complete-emoji">🖼️</div>
+            <div class="complete-title">Session terminée !</div>
+            <div class="complete-stats" id="imageCompleteStats"></div>
+            <button class="primary-btn" onclick="startImageMode()">Recommencer</button>
+            <button class="secondary-btn" style="margin-top:10px" onclick="exitMode()">Retour</button>
+        </div>
+    </div>
+
     <!-- LISTEN MODE -->
     <div class="page" id="listenPage">
         <div class="page-header">
@@ -811,6 +854,9 @@
                 modeListenDesc: 'Écoute et trouve le mot',
                 listenToWord: 'Écoute le mot',
                 replay: 'Réécouter',
+                modeImage: 'Image',
+                modeImageDesc: 'Trouve le mot à partir de l\'image',
+                whatIsThis: 'Qu\'est-ce que c\'est ?',
                 // Cards
                 tapToFlip: 'Appuie pour retourner',
                 toReview: 'À revoir',
@@ -893,6 +939,9 @@
                 modeListenDesc: 'Listen and find the word',
                 listenToWord: 'Listen to the word',
                 replay: 'Replay',
+                modeImage: 'Image',
+                modeImageDesc: 'Find the word from the image',
+                whatIsThis: 'What is this?',
                 // Cards
                 tapToFlip: 'Tap to flip',
                 toReview: 'To review',
@@ -975,6 +1024,9 @@
                 modeListenDesc: 'استمع وجد الكلمة',
                 listenToWord: 'استمع للكلمة',
                 replay: 'إعادة',
+                modeImage: 'صورة',
+                modeImageDesc: 'جد الكلمة من الصورة',
+                whatIsThis: 'ما هذا؟',
                 // Cards
                 tapToFlip: 'اضغط للقلب',
                 toReview: 'للمراجعة',
@@ -1140,6 +1192,11 @@
         let listenQueue = [], listenIndex = 0, listenCorrect = 0, listenWrong = 0, listenRetrySet = new Set();
         let listenConfig = { inputMode: 'qcm', correctionLevel: 'flexible' };
         let currentListenQuestion = { correctAnswer: '', cardIdx: 0, card: null };
+
+        // Image mode
+        let imageQueue = [], imageIndex = 0, imageCorrect = 0, imageWrong = 0, imageRetrySet = new Set();
+        let imageConfig = { inputMode: 'qcm', correctionLevel: 'flexible' };
+        let currentImageQuestion = { correctAnswer: '', cardIdx: 0, card: null };
 
         // ========== STORAGE ==========
         function getStorageKey(id) { return `flashcards-${id}`; }
@@ -1816,6 +1873,147 @@
             document.getElementById('listenCompleteStats').textContent = `✅ ${listenCorrect} ${t('correct')} · ❌ ${listenWrong} ${t('errors')}`;
         }
 
+        // ========== IMAGE MODE ==========
+        function startImageMode() {
+            // Filter cards that have emoji or image
+            const cardsWithVisual = currentDeck.cards.filter(c => c.emoji || c.image);
+            
+            if (cardsWithVisual.length === 0) {
+                alert(currentLang === 'fr' ? 'Ce deck n\'a pas d\'images ou émojis. Ajoutez "emoji" ou "image" aux cartes.' :
+                      currentLang === 'ar' ? 'هذه المجموعة ليس بها صور أو رموز.' :
+                      'This deck has no images or emojis. Add "emoji" or "image" to cards.');
+                return;
+            }
+            
+            imageQueue = cardsWithVisual.map((card, idx) => ({ card, idx: currentDeck.cards.indexOf(card) }));
+            imageQueue = shuffle(imageQueue);
+            imageIndex = 0;
+            imageCorrect = 0;
+            imageWrong = 0;
+            imageRetrySet = new Set();
+            
+            document.getElementById('imageComplete').classList.remove('active');
+            document.getElementById('imageQuestionArea').style.display = 'flex';
+            
+            showPage('imagePage');
+            renderImageQuestion();
+        }
+        
+        function renderImageQuestion() {
+            if (imageIndex >= imageQueue.length) {
+                showImageComplete();
+                return;
+            }
+            
+            const item = imageQueue[imageIndex];
+            // Ask for Arabic word (front) based on image/emoji
+            currentImageQuestion = {
+                correctAnswer: item.card.front,
+                cardIdx: item.idx,
+                card: item.card
+            };
+            
+            // Update progress
+            document.getElementById('imageProgress').textContent = `${imageIndex + 1} / ${imageQueue.length}`;
+            document.getElementById('imageProgressBar').style.width = `${(imageIndex / imageQueue.length) * 100}%`;
+            document.getElementById('imageCount').textContent = imageQueue.length - imageIndex;
+            
+            // Show retry badge if needed
+            const isRetry = imageRetrySet.has(item.idx);
+            document.getElementById('imageRetryBadge').style.display = isRetry ? 'block' : 'none';
+            document.getElementById('imageRetryBadge').textContent = t('tryAgain');
+            
+            // Display image or emoji
+            const display = document.getElementById('imageDisplay');
+            if (item.card.image) {
+                display.innerHTML = `<img src="${item.card.image}" alt="" style="max-width:150px; max-height:150px; border-radius:10px;">`;
+            } else {
+                display.textContent = item.card.emoji || '❓';
+            }
+            
+            document.getElementById('imageQuestion').textContent = t('whatIsThis');
+            
+            // Reset written input
+            const writtenInput = document.getElementById('imageWrittenInput');
+            const writtenFeedback = document.getElementById('imageWrittenFeedback');
+            writtenInput.value = '';
+            writtenInput.classList.remove('correct', 'wrong');
+            writtenInput.disabled = false;
+            writtenFeedback.style.display = 'none';
+            
+            if (imageConfig.inputMode === 'written') {
+                // Written mode - expect Arabic answer
+                document.getElementById('imageAnswersList').style.display = 'none';
+                document.getElementById('imageWrittenArea').style.display = 'block';
+                writtenInput.placeholder = t('typeYourAnswer');
+                writtenInput.style.direction = 'rtl';
+                writtenInput.style.fontFamily = "'Amiri', serif";
+                writtenInput.focus();
+            } else {
+                // QCM mode
+                document.getElementById('imageAnswersList').style.display = 'flex';
+                document.getElementById('imageWrittenArea').style.display = 'none';
+                
+                const otherCards = currentDeck.cards.filter((c, i) => i !== item.idx);
+                const allAnswers = shuffle([item.card, ...shuffle(otherCards).slice(0, 3)]);
+                
+                document.getElementById('imageAnswersList').innerHTML = allAnswers.map((ans, i) => {
+                    return `<button class="answer-btn arabic" onclick="checkImageAnswer(${i}, ${allAnswers.indexOf(item.card)}, ${item.idx})">${ans.front}</button>`;
+                }).join('');
+            }
+        }
+        
+        function checkImageAnswer(sel, correct, cardIdx) {
+            const buttons = document.querySelectorAll('#imageAnswersList .answer-btn');
+            buttons[correct].classList.add('correct');
+            
+            if (sel === correct) {
+                imageCorrect++;
+                imageRetrySet.delete(cardIdx);
+                setTimeout(() => { imageIndex++; renderImageQuestion(); }, 600);
+            } else {
+                buttons[sel].classList.add('wrong');
+                imageWrong++;
+                imageRetrySet.add(cardIdx);
+                setTimeout(() => { imageIndex++; renderImageQuestion(); }, 1200);
+            }
+            buttons.forEach(b => b.disabled = true);
+        }
+        
+        function submitImageWrittenAnswer() {
+            const input = document.getElementById('imageWrittenInput');
+            const feedback = document.getElementById('imageWrittenFeedback');
+            const userAnswer = input.value.trim();
+            
+            if (!userAnswer) return;
+            
+            const isCorrect = checkWrittenAnswer(userAnswer, currentImageQuestion.correctAnswer, imageConfig.correctionLevel);
+            
+            input.disabled = true;
+            input.classList.add(isCorrect ? 'correct' : 'wrong');
+            
+            feedback.style.display = 'block';
+            feedback.className = 'written-feedback ' + (isCorrect ? 'correct' : 'wrong');
+            
+            if (isCorrect) {
+                feedback.innerHTML = `✓ ${t('correctLabel')}`;
+                imageCorrect++;
+                imageRetrySet.delete(currentImageQuestion.cardIdx);
+            } else {
+                feedback.innerHTML = `✗ ${t('incorrectLabel')}<div class="correct-answer">${t('correctAnswerWas')} ${currentImageQuestion.correctAnswer}</div>`;
+                imageWrong++;
+                imageRetrySet.add(currentImageQuestion.cardIdx);
+            }
+            
+            setTimeout(() => { imageIndex++; renderImageQuestion(); }, isCorrect ? 1000 : 2000);
+        }
+        
+        function showImageComplete() {
+            document.getElementById('imageQuestionArea').style.display = 'none';
+            document.getElementById('imageComplete').classList.add('active');
+            document.getElementById('imageCompleteStats').textContent = `✅ ${imageCorrect} ${t('correct')} · ❌ ${imageWrong} ${t('errors')}`;
+        }
+
         // ========== OPTIONS ==========
         let currentOptionsMode = 'cards'; // cards, learn, test
         
@@ -1827,9 +2025,9 @@
             
             // Show/hide answer mode options based on mode
             const answerModeGroup = document.getElementById('answerModeGroup');
-            if (mode === 'learn' || mode === 'test' || mode === 'listen') {
+            if (mode === 'learn' || mode === 'test' || mode === 'listen' || mode === 'image') {
                 answerModeGroup.style.display = 'block';
-                const config = mode === 'learn' ? learnConfig : (mode === 'listen' ? listenConfig : testConfig);
+                const config = mode === 'learn' ? learnConfig : (mode === 'listen' ? listenConfig : (mode === 'image' ? imageConfig : testConfig));
                 document.getElementById('modeQCM').classList.toggle('active', config.inputMode === 'qcm');
                 document.getElementById('modeWritten').classList.toggle('active', config.inputMode === 'written');
                 document.getElementById('correctionOptions').style.display = config.inputMode === 'written' ? 'block' : 'none';
@@ -1854,6 +2052,8 @@
                 testConfig.inputMode = mode;
             } else if (currentOptionsMode === 'listen') {
                 listenConfig.inputMode = mode;
+            } else if (currentOptionsMode === 'image') {
+                imageConfig.inputMode = mode;
             }
         }
         
@@ -1864,6 +2064,8 @@
                 testConfig.correctionLevel = level;
             } else if (currentOptionsMode === 'listen') {
                 listenConfig.correctionLevel = level;
+            } else if (currentOptionsMode === 'image') {
+                imageConfig.correctionLevel = level;
             }
             updateCorrectionUI(level);
         }
@@ -1893,6 +2095,7 @@
             if (currentOptionsMode === 'learn') startLearnMode();
             else if (currentOptionsMode === 'test') startTestConfig();
             else if (currentOptionsMode === 'listen') startListenMode();
+            else if (currentOptionsMode === 'image') startImageMode();
             else startCardsMode(); 
         }
 
@@ -1911,7 +2114,8 @@
                     { name: 'modeLearn', desc: 'modeLearnDesc' },
                     { name: 'modeTest', desc: 'modeTestDesc' },
                     { name: 'modeMatch', desc: 'modeMatchDesc' },
-                    { name: 'modeListen', desc: 'modeListenDesc' }
+                    { name: 'modeListen', desc: 'modeListenDesc' },
+                    { name: 'modeImage', desc: 'modeImageDesc' }
                 ];
                 if (modes[i]) {
                     btn.querySelector('.mode-name').textContent = t(modes[i].name);
