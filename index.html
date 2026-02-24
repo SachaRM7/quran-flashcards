@@ -308,6 +308,25 @@
             .match-cell { font-size: 0.75rem; }
             .match-cell.arabic { font-size: 0.95rem; }
         }
+
+        /* RTL Support */
+        [dir="rtl"] .page-header { flex-direction: row-reverse; }
+        [dir="rtl"] .mode-btn { flex-direction: row-reverse; text-align: right; }
+        [dir="rtl"] .mode-info { text-align: right; }
+        [dir="rtl"] .deck-meta { flex-direction: row-reverse; }
+        [dir="rtl"] .cards-header { flex-direction: row-reverse; }
+        [dir="rtl"] .progress-bar-container { flex-direction: row-reverse; }
+        [dir="rtl"] .swipe-hint.left { left: auto; right: -50px; }
+        [dir="rtl"] .swipe-hint.right { right: auto; left: -50px; }
+        [dir="rtl"] .config-row { flex-direction: row-reverse; }
+        [dir="rtl"] .option-row { flex-direction: row-reverse; }
+        [dir="rtl"] .results-stat { flex-direction: row-reverse; }
+        [dir="rtl"] .result-answers { flex-direction: row-reverse; }
+        [dir="rtl"] .learn-progress { flex-direction: row-reverse; }
+        [dir="rtl"] .match-header { flex-direction: row-reverse; }
+        [dir="rtl"] .modal-header { flex-direction: row-reverse; }
+        [dir="rtl"] .answer-btn { text-align: right; }
+        [dir="rtl"] .test-answer-btn { text-align: right; }
     </style>
 </head>
 <body>
@@ -725,13 +744,83 @@
                 browseAgain: 'Browse again',
                 general: 'General',
                 all: 'All'
+            },
+            ar: {
+                appTitle: '📚 البطاقات التعليمية',
+                chooseDeck: 'اختر مجموعة للبدء',
+                cards: 'بطاقات',
+                mastered: 'متقن',
+                learning: 'قيد التعلم',
+                known: 'معروف',
+                // Modes
+                modeCards: 'البطاقات',
+                modeCardsDesc: 'اسحب لفرز ما تعرفه',
+                modeLearn: 'تعلّم',
+                modeLearnDesc: 'اختبار مع تكرار ذكي',
+                modeTest: 'اختبار',
+                modeTestDesc: 'قيّم معرفتك',
+                modeMatch: 'وصّل',
+                modeMatchDesc: 'وصّل الأزواج بسرعة',
+                // Cards
+                tapToFlip: 'اضغط للقلب',
+                toReview: 'للمراجعة',
+                // Learn
+                learningCycle: 'دورة التعلم',
+                tryAgain: 'لنحاول مرة أخرى',
+                cycleComplete: 'اكتملت الدورة!',
+                correct: 'صحيح',
+                errors: 'أخطاء',
+                nextCycle: 'الدورة التالية',
+                finish: 'إنهاء',
+                congrats: 'أحسنت!',
+                allLearned: 'ممتاز! لقد تعلمت كل شيء! 🎉',
+                // Test
+                configureTest: 'إعداد الاختبار',
+                numQuestions: 'عدد الأسئلة',
+                multipleChoice: 'اختيار متعدد',
+                startTest: 'ابدأ الاختبار',
+                next: 'التالي',
+                yourResults: 'نتائجك',
+                youAreLearning: 'أنت في طور التعلم!',
+                wellDone: 'أحسنت!',
+                excellent: 'ممتاز! 🌟',
+                correctLabel: 'صحيح',
+                incorrectLabel: 'خطأ',
+                learnMode: '📖 وضع التعلم',
+                newTest: '🔄 اختبار جديد',
+                yourAnswers: 'إجاباتك',
+                // Match
+                readyToPlay: 'مستعد للعب؟',
+                matchInstructions: 'وصّل جميع المصطلحات بتعريفاتها بأسرع وقت ممكن. إذا أخطأت، ستُضاف عقوبة زمنية!',
+                startGame: 'ابدأ اللعبة',
+                seconds: 'ثواني',
+                allPairsFound: 'تم العثور على جميع الأزواج!',
+                playAgain: 'العب مرة أخرى',
+                back: 'رجوع',
+                // Options
+                options: 'الخيارات',
+                shuffleCards: 'خلط البطاقات',
+                cardSide: 'وجه البطاقة',
+                front: 'الأمام',
+                arabic: 'عربي',
+                french: 'فرنسي',
+                browseAgain: 'تصفح مرة أخرى',
+                general: 'عام',
+                all: 'الكل'
             }
         };
         
         // Detect language
         const userLang = (navigator.language || navigator.userLanguage || 'fr').split('-')[0];
         const lang = translations[userLang] ? userLang : 'fr';
+        const isRTL = lang === 'ar';
         const t = (key) => translations[lang][key] || translations['fr'][key] || key;
+        
+        // Apply RTL if Arabic
+        if (isRTL) {
+            document.documentElement.dir = 'rtl';
+            document.body.style.textAlign = 'right';
+        }
 
         // ========== STATE ==========
         let decks = [];
