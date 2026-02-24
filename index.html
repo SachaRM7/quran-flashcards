@@ -963,44 +963,69 @@
             const card = document.getElementById('swipeCard');
             const cardInner = document.getElementById('cardInner');
             let startX = 0;
+            let startY = 0;
             let currentX = 0;
             let isDragging = false;
+            let hasMoved = false;
+            const DRAG_THRESHOLD = 15; // Minimum px before drag starts
+            const SWIPE_THRESHOLD = 80; // Minimum px to trigger swipe
 
             function onStart(e) {
                 if (e.target.tagName === 'BUTTON') return;
+                const touch = e.type === 'touchstart' ? e.touches[0] : e;
+                startX = touch.clientX;
+                startY = touch.clientY;
+                currentX = startX;
                 isDragging = true;
-                startX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+                hasMoved = false;
                 card.style.transition = 'none';
             }
 
             function onMove(e) {
                 if (!isDragging) return;
-                currentX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
-                const diff = currentX - startX;
-                const rotate = diff * 0.05;
-                card.style.transform = `translateX(${diff}px) rotate(${rotate}deg)`;
+                const touch = e.type === 'touchmove' ? e.touches[0] : e;
+                currentX = touch.clientX;
+                const diffX = currentX - startX;
+                const diffY = touch.clientY - startY;
                 
-                card.classList.toggle('swiping-right', diff > 50);
-                card.classList.toggle('swiping-left', diff < -50);
+                // Only start visual drag after threshold (and more horizontal than vertical)
+                if (Math.abs(diffX) > DRAG_THRESHOLD && Math.abs(diffX) > Math.abs(diffY)) {
+                    hasMoved = true;
+                    const visualDiff = diffX > 0 ? diffX - DRAG_THRESHOLD : diffX + DRAG_THRESHOLD;
+                    const rotate = visualDiff * 0.04;
+                    card.style.transform = `translateX(${visualDiff}px) rotate(${rotate}deg)`;
+                    
+                    card.classList.toggle('swiping-right', diffX > 50);
+                    card.classList.toggle('swiping-left', diffX < -50);
+                }
             }
 
-            function onEnd() {
+            function onEnd(e) {
                 if (!isDragging) return;
                 isDragging = false;
                 card.style.transition = '';
                 
                 const diff = currentX - startX;
-                if (diff > 100) {
+                
+                if (hasMoved && diff > SWIPE_THRESHOLD) {
                     swipeRight();
-                } else if (diff < -100) {
+                } else if (hasMoved && diff < -SWIPE_THRESHOLD) {
                     swipeLeft();
                 } else {
+                    // Reset card position
                     card.style.transform = '';
                     card.classList.remove('swiping-left', 'swiping-right');
+                    
+                    // If didn't move much, it's a tap - flip the card
+                    if (!hasMoved && Math.abs(diff) < DRAG_THRESHOLD) {
+                        if (e.target.tagName !== 'BUTTON') {
+                            document.getElementById('cardInner').classList.toggle('flipped');
+                        }
+                    }
                 }
             }
 
-            // Remove old listeners
+            // Remove old listeners by cloning
             card.replaceWith(card.cloneNode(true));
             const newCard = document.getElementById('swipeCard');
             
@@ -1014,9 +1039,10 @@
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onEnd);
             
-            // Tap to flip
+            // Click fallback for flip (desktop)
             newCard.addEventListener('click', (e) => {
-                if (Math.abs(currentX - startX) < 10 && e.target.tagName !== 'BUTTON') {
+                // Only flip if we didn't just finish a drag
+                if (!hasMoved && e.target.tagName !== 'BUTTON') {
                     document.getElementById('cardInner').classList.toggle('flipped');
                 }
             });
