@@ -184,6 +184,70 @@
         .answer-btn.wrong { border-color: var(--accent-red); background: rgba(248, 81, 73, 0.15); }
         .answer-btn.arabic { font-family: 'Amiri', serif; font-size: 1.3rem; text-align: right; direction: rtl; }
 
+        /* Written Answer */
+        .written-input {
+            width: 100%;
+            padding: 16px 20px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .written-input:focus { border-color: var(--accent-blue); }
+        .written-input.correct { border-color: var(--accent-green); background: rgba(63, 185, 80, 0.1); }
+        .written-input.wrong { border-color: var(--accent-red); background: rgba(248, 81, 73, 0.1); }
+        .written-feedback { text-align: center; }
+        .written-feedback.correct { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); }
+        .written-feedback.wrong { background: rgba(248, 81, 73, 0.15); color: var(--accent-red); }
+        .written-feedback .correct-answer { margin-top: 8px; color: var(--accent-green); font-weight: 600; }
+        
+        /* Mode selector in options */
+        .mode-toggle { display: flex; background: var(--bg-secondary); border-radius: 8px; overflow: hidden; }
+        .mode-toggle-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .mode-toggle-btn.active { background: var(--accent-blue); color: #fff; }
+        
+        .correction-options { margin-top: 10px; }
+        .correction-option {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            transition: background 0.2s;
+        }
+        .correction-option:hover { background: var(--bg-card); }
+        .correction-option.active { background: rgba(88, 166, 255, 0.15); }
+        .correction-radio {
+            width: 18px; height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .correction-option.active .correction-radio { border-color: var(--accent-blue); }
+        .correction-option.active .correction-radio::after {
+            content: '';
+            width: 10px; height: 10px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+        }
+        .correction-label { font-size: 0.9rem; }
+        .correction-desc { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+
         /* ========== TEST MODE ========== */
         #testConfigPage, #testPage, #testResultsPage { padding: 20px; }
         .config-section { max-width: 400px; margin: 0 auto; width: 100%; }
@@ -438,7 +502,7 @@
         <div class="page-header">
             <button class="back-btn" onclick="exitMode()">←</button>
             <div class="page-title">Apprendre</div>
-            <button class="settings-btn" onclick="openOptions()">⚙️</button>
+            <button class="settings-btn" onclick="openOptions('learn')">⚙️</button>
         </div>
         <div class="learn-header">
             <div class="learn-title" id="learnCycle">Cycle d'apprentissage 1</div>
@@ -451,6 +515,11 @@
             <div class="retry-badge" id="retryBadge" style="display:none">Essayons à nouveau</div>
             <div class="question-text" id="questionText"></div>
             <div class="answers-list" id="answersList"></div>
+            <div class="written-answer-area" id="writtenAnswerArea" style="display:none; width:100%;">
+                <input type="text" class="written-input" id="writtenInput" placeholder="" autocomplete="off" autocapitalize="off">
+                <button class="primary-btn" style="margin-top:10px" id="submitWrittenBtn" onclick="submitWrittenAnswer()">Valider</button>
+                <div class="written-feedback" id="writtenFeedback" style="display:none; margin-top:15px; padding:15px; border-radius:10px;"></div>
+            </div>
         </div>
         <div class="complete-screen" id="learnComplete">
             <div class="complete-emoji">🏆</div>
@@ -611,6 +680,37 @@
                     </div>
                 </div>
             </div>
+            <!-- Learn/Test specific options -->
+            <div class="option-group" id="answerModeGroup" style="display:none;">
+                <div class="option-group-title" id="answerModeTitle">Mode de réponse</div>
+                <div class="mode-toggle">
+                    <button class="mode-toggle-btn active" id="modeQCM" onclick="setAnswerMode('qcm')">Choix multiple</button>
+                    <button class="mode-toggle-btn" id="modeWritten" onclick="setAnswerMode('written')">Réponse écrite</button>
+                </div>
+                <div class="correction-options" id="correctionOptions" style="display:none;">
+                    <div class="correction-option active" onclick="setCorrectionLevel('flexible')">
+                        <div class="correction-radio"></div>
+                        <div>
+                            <div class="correction-label">Flexible</div>
+                            <div class="correction-desc">Tolère les fautes mineures et accents</div>
+                        </div>
+                    </div>
+                    <div class="correction-option" onclick="setCorrectionLevel('moderate')">
+                        <div class="correction-radio"></div>
+                        <div>
+                            <div class="correction-label">Modéré</div>
+                            <div class="correction-desc">Tolère les accents, orthographe exacte</div>
+                        </div>
+                    </div>
+                    <div class="correction-option" onclick="setCorrectionLevel('strict')">
+                        <div class="correction-radio"></div>
+                        <div>
+                            <div class="correction-label">Strict</div>
+                            <div class="correction-desc">Réponse exacte requise</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <button class="primary-btn" style="margin-top:10px" onclick="restartWithOptions()">Parcourir à nouveau</button>
         </div>
     </div>
@@ -680,7 +780,22 @@
                 french: 'Français',
                 browseAgain: 'Parcourir à nouveau',
                 general: 'Général',
-                all: 'Toutes'
+                all: 'Toutes',
+                // Written answers
+                answerMode: 'Mode de réponse',
+                multipleChoice: 'Choix multiple',
+                writtenAnswer: 'Réponse écrite',
+                correctionLevel: 'Niveau de correction',
+                flexible: 'Flexible',
+                moderate: 'Modéré',
+                strict: 'Strict',
+                flexibleDesc: 'Tolère les fautes mineures et accents',
+                moderateDesc: 'Tolère les accents, orthographe exacte',
+                strictDesc: 'Réponse exacte requise',
+                typeYourAnswer: 'Tapez votre réponse...',
+                submit: 'Valider',
+                correctAnswerWas: 'Bonne réponse :',
+                yourAnswerWas: 'Votre réponse :'
             },
             en: {
                 appTitle: '📚 Flashcards',
@@ -743,7 +858,22 @@
                 french: 'French',
                 browseAgain: 'Browse again',
                 general: 'General',
-                all: 'All'
+                all: 'All',
+                // Written answers
+                answerMode: 'Answer mode',
+                multipleChoice: 'Multiple choice',
+                writtenAnswer: 'Written answer',
+                correctionLevel: 'Correction level',
+                flexible: 'Flexible',
+                moderate: 'Moderate',
+                strict: 'Strict',
+                flexibleDesc: 'Tolerates minor typos and accents',
+                moderateDesc: 'Tolerates accents, exact spelling',
+                strictDesc: 'Exact answer required',
+                typeYourAnswer: 'Type your answer...',
+                submit: 'Submit',
+                correctAnswerWas: 'Correct answer:',
+                yourAnswerWas: 'Your answer:'
             },
             ar: {
                 appTitle: '📚 البطاقات التعليمية',
@@ -806,7 +936,22 @@
                 french: 'فرنسي',
                 browseAgain: 'تصفح مرة أخرى',
                 general: 'عام',
-                all: 'الكل'
+                all: 'الكل',
+                // Written answers
+                answerMode: 'نوع الإجابة',
+                multipleChoice: 'اختيار متعدد',
+                writtenAnswer: 'إجابة مكتوبة',
+                correctionLevel: 'مستوى التصحيح',
+                flexible: 'مرن',
+                moderate: 'معتدل',
+                strict: 'صارم',
+                flexibleDesc: 'يتسامح مع الأخطاء الطفيفة',
+                moderateDesc: 'يتسامح مع التشكيل، إملاء دقيق',
+                strictDesc: 'إجابة دقيقة مطلوبة',
+                typeYourAnswer: 'اكتب إجابتك...',
+                submit: 'تأكيد',
+                correctAnswerWas: 'الإجابة الصحيحة:',
+                yourAnswerWas: 'إجابتك:'
             }
         };
         
@@ -835,9 +980,74 @@
 
         // Learn mode
         let learnQueue = [], learnIndex = 0, learnCycle = 1, learnCorrect = 0, learnWrong = 0, retrySet = new Set();
+        let learnConfig = { inputMode: 'qcm', correctionLevel: 'flexible' }; // qcm | written
 
         // Test mode
-        let testQuestions = [], testIndex = 0, testAnswers = [], testConfig = { qcm: true };
+        let testQuestions = [], testIndex = 0, testAnswers = [], testConfig = { inputMode: 'qcm', correctionLevel: 'flexible' };
+
+        // ========== ANSWER VALIDATION ==========
+        // Remove Arabic diacritics (harakats)
+        function removeArabicDiacritics(str) {
+            return str.replace(/[\u064B-\u065F\u0670]/g, '');
+        }
+        
+        // Remove French accents
+        function removeFrenchAccents(str) {
+            return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+        
+        // Normalize string for comparison
+        function normalizeAnswer(str, level = 'flexible') {
+            let normalized = str.trim().toLowerCase();
+            
+            // Always remove Arabic diacritics (harakats are optional)
+            normalized = removeArabicDiacritics(normalized);
+            
+            if (level === 'flexible' || level === 'moderate') {
+                // Remove accents for flexible/moderate
+                normalized = removeFrenchAccents(normalized);
+            }
+            
+            if (level === 'flexible') {
+                // Remove extra spaces, punctuation for flexible
+                normalized = normalized.replace(/\s+/g, ' ').replace(/[.,!?;:'"()-]/g, '');
+            }
+            
+            return normalized;
+        }
+        
+        // Calculate Levenshtein distance for typo tolerance
+        function levenshtein(a, b) {
+            if (a.length === 0) return b.length;
+            if (b.length === 0) return a.length;
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    matrix[i][j] = b.charAt(i-1) === a.charAt(j-1) 
+                        ? matrix[i-1][j-1]
+                        : Math.min(matrix[i-1][j-1] + 1, matrix[i][j-1] + 1, matrix[i-1][j] + 1);
+                }
+            }
+            return matrix[b.length][a.length];
+        }
+        
+        // Check if answer is correct
+        function checkWrittenAnswer(userAnswer, correctAnswer, level = 'flexible') {
+            const normalizedUser = normalizeAnswer(userAnswer, level);
+            const normalizedCorrect = normalizeAnswer(correctAnswer, level);
+            
+            if (normalizedUser === normalizedCorrect) return true;
+            
+            if (level === 'flexible') {
+                // Allow 1-2 typos for longer words
+                const maxTypos = normalizedCorrect.length > 5 ? 2 : 1;
+                return levenshtein(normalizedUser, normalizedCorrect) <= maxTypos;
+            }
+            
+            return false;
+        }
 
         // Match mode
         let matchCells = [], matchSelected = null, matchStartTime = 0, matchTimerInterval = null, matchPenalty = 0;
@@ -1033,23 +1243,94 @@
             } else { learnQueue = shuffle(learnQueue); }
             learnIndex = 0;
         }
+        let currentLearnQuestion = { askFrench: false, correctAnswer: '', cardIdx: 0 };
+        
         function renderQuestion() {
             if (learnIndex >= learnQueue.length) { showLearnComplete(); return; }
             const item = learnQueue[learnIndex];
             document.getElementById('retryBadge').style.display = item.isRetry ? 'block' : 'none';
             document.getElementById('retryBadge').textContent = t('tryAgain');
+            
             const askFrench = Math.random() > 0.5;
+            currentLearnQuestion = {
+                askFrench,
+                correctAnswer: askFrench ? item.card.front : item.card.back,
+                cardIdx: item.idx
+            };
+            
             const questionText = document.getElementById('questionText');
             questionText.textContent = askFrench ? item.card.back : item.card.front;
             questionText.classList.toggle('arabic', !askFrench);
-            const otherCards = currentDeck.cards.filter((c, i) => i !== item.idx);
-            const allAnswers = shuffle([item.card, ...shuffle(otherCards).slice(0, 3)]);
-            document.getElementById('answersList').innerHTML = allAnswers.map((ans, i) => {
-                const text = askFrench ? ans.front : ans.back;
-                return `<button class="answer-btn ${askFrench ? 'arabic' : ''}" onclick="checkAnswer(${i}, ${allAnswers.indexOf(item.card)}, ${item.idx})">${text}</button>`;
-            }).join('');
+            
+            // Reset written input
+            const writtenInput = document.getElementById('writtenInput');
+            const writtenFeedback = document.getElementById('writtenFeedback');
+            writtenInput.value = '';
+            writtenInput.classList.remove('correct', 'wrong');
+            writtenInput.disabled = false;
+            writtenFeedback.style.display = 'none';
+            
+            if (learnConfig.inputMode === 'written') {
+                // Written mode
+                document.getElementById('answersList').style.display = 'none';
+                document.getElementById('writtenAnswerArea').style.display = 'block';
+                writtenInput.placeholder = t('typeYourAnswer');
+                writtenInput.focus();
+                // Set direction based on expected answer
+                writtenInput.style.direction = askFrench ? 'rtl' : 'ltr';
+                writtenInput.style.fontFamily = askFrench ? "'Amiri', serif" : "'Inter', sans-serif";
+            } else {
+                // QCM mode
+                document.getElementById('answersList').style.display = 'flex';
+                document.getElementById('writtenAnswerArea').style.display = 'none';
+                const otherCards = currentDeck.cards.filter((c, i) => i !== item.idx);
+                const allAnswers = shuffle([item.card, ...shuffle(otherCards).slice(0, 3)]);
+                document.getElementById('answersList').innerHTML = allAnswers.map((ans, i) => {
+                    const text = askFrench ? ans.front : ans.back;
+                    return `<button class="answer-btn ${askFrench ? 'arabic' : ''}" onclick="checkAnswer(${i}, ${allAnswers.indexOf(item.card)}, ${item.idx})">${text}</button>`;
+                }).join('');
+            }
             updateLearnProgress();
         }
+        
+        function submitWrittenAnswer() {
+            const input = document.getElementById('writtenInput');
+            const feedback = document.getElementById('writtenFeedback');
+            const userAnswer = input.value.trim();
+            
+            if (!userAnswer) return;
+            
+            const isCorrect = checkWrittenAnswer(userAnswer, currentLearnQuestion.correctAnswer, learnConfig.correctionLevel);
+            
+            input.disabled = true;
+            input.classList.add(isCorrect ? 'correct' : 'wrong');
+            
+            feedback.style.display = 'block';
+            feedback.className = 'written-feedback ' + (isCorrect ? 'correct' : 'wrong');
+            
+            if (isCorrect) {
+                feedback.innerHTML = `✓ ${t('correctLabel')}`;
+                learnCorrect++;
+                retrySet.delete(currentLearnQuestion.cardIdx);
+            } else {
+                feedback.innerHTML = `✗ ${t('incorrectLabel')}<div class="correct-answer">${t('correctAnswerWas')} ${currentLearnQuestion.correctAnswer}</div>`;
+                learnWrong++;
+                retrySet.add(currentLearnQuestion.cardIdx);
+            }
+            
+            setTimeout(() => { learnIndex++; renderQuestion(); }, isCorrect ? 1000 : 2000);
+        }
+        
+        // Handle Enter key for written input
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && document.getElementById('writtenAnswerArea').style.display !== 'none') {
+                const input = document.getElementById('writtenInput');
+                if (!input.disabled && input.value.trim()) {
+                    submitWrittenAnswer();
+                }
+            }
+        });
+        
         function checkAnswer(sel, correct, cardIdx) {
             const buttons = document.querySelectorAll('.answer-btn');
             buttons[correct].classList.add('correct');
@@ -1249,15 +1530,79 @@
         function restartMatch() { startMatch(); }
 
         // ========== OPTIONS ==========
-        function openOptions() {
+        let currentOptionsMode = 'cards'; // cards, learn, test
+        
+        function openOptions(mode = 'cards') {
+            currentOptionsMode = mode;
             document.getElementById('optionsModal').classList.add('active');
             document.getElementById('toggleShuffle').classList.toggle('active', options.shuffle);
             document.querySelectorAll('.side-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.side === options.frontSide));
+            
+            // Show/hide answer mode options based on mode
+            const answerModeGroup = document.getElementById('answerModeGroup');
+            if (mode === 'learn' || mode === 'test') {
+                answerModeGroup.style.display = 'block';
+                const config = mode === 'learn' ? learnConfig : testConfig;
+                document.getElementById('modeQCM').classList.toggle('active', config.inputMode === 'qcm');
+                document.getElementById('modeWritten').classList.toggle('active', config.inputMode === 'written');
+                document.getElementById('correctionOptions').style.display = config.inputMode === 'written' ? 'block' : 'none';
+                updateCorrectionUI(config.correctionLevel);
+            } else {
+                answerModeGroup.style.display = 'none';
+            }
         }
+        
         function closeOptions() { document.getElementById('optionsModal').classList.remove('active'); }
         function toggleOption(opt) { options[opt] = !options[opt]; document.getElementById('toggleShuffle').classList.toggle('active', options.shuffle); }
         function setSide(side) { options.frontSide = side; document.querySelectorAll('.side-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.side === side)); }
-        function restartWithOptions() { closeOptions(); startCardsMode(); }
+        
+        function setAnswerMode(mode) {
+            document.getElementById('modeQCM').classList.toggle('active', mode === 'qcm');
+            document.getElementById('modeWritten').classList.toggle('active', mode === 'written');
+            document.getElementById('correctionOptions').style.display = mode === 'written' ? 'block' : 'none';
+            
+            if (currentOptionsMode === 'learn') {
+                learnConfig.inputMode = mode;
+            } else if (currentOptionsMode === 'test') {
+                testConfig.inputMode = mode;
+            }
+        }
+        
+        function setCorrectionLevel(level) {
+            if (currentOptionsMode === 'learn') {
+                learnConfig.correctionLevel = level;
+            } else if (currentOptionsMode === 'test') {
+                testConfig.correctionLevel = level;
+            }
+            updateCorrectionUI(level);
+        }
+        
+        function updateCorrectionUI(level) {
+            document.querySelectorAll('.correction-option').forEach(opt => {
+                const optLevel = opt.querySelector('.correction-label').textContent.toLowerCase();
+                const isActive = optLevel === level || 
+                    (optLevel === t('flexible').toLowerCase() && level === 'flexible') ||
+                    (optLevel === t('moderate').toLowerCase() && level === 'moderate') ||
+                    (optLevel === t('strict').toLowerCase() && level === 'strict');
+                opt.classList.toggle('active', opt.textContent.toLowerCase().includes(level));
+            });
+            // Simpler approach - reset all and set the right one
+            const options = document.querySelectorAll('.correction-option');
+            options.forEach((opt, i) => {
+                opt.classList.toggle('active', 
+                    (i === 0 && level === 'flexible') ||
+                    (i === 1 && level === 'moderate') ||
+                    (i === 2 && level === 'strict')
+                );
+            });
+        }
+        
+        function restartWithOptions() { 
+            closeOptions(); 
+            if (currentOptionsMode === 'learn') startLearnMode();
+            else if (currentOptionsMode === 'test') startTestConfig();
+            else startCardsMode(); 
+        }
 
         // ========== UTILS ==========
         function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
